@@ -16,7 +16,9 @@ void main() {
 class MyGame extends FlameGame with TapDetector {
   late Square square;
   late List<Obstacle> obstacles;
+  late List<PowerUp> powerUps;
   Random rng = Random();
+  double timeUntilNextPowerUp = 3.0;
 
   @override
   Future<void> onLoad() async {
@@ -24,9 +26,10 @@ class MyGame extends FlameGame with TapDetector {
     add(square);
     obstacles = List.generate(
         5,
-        (index) => Obstacle(size.x, rng.nextInt(3) * size.y / 2,
-            rng.nextDouble() * 128.0 + 64.0));
+        (index) => Obstacle(size.x + index * size.x / 5,
+            rng.nextInt(3) * size.y / 2, rng.nextDouble() * 256.0 + 64.0));
     obstacles.forEach(add);
+    powerUps = [];
   }
 
   @override
@@ -39,21 +42,41 @@ class MyGame extends FlameGame with TapDetector {
     super.update(dt);
     if (square.toRect().bottom > size.y ||
         obstacles
-            .any((obstacle) => obstacle.toRect().overlaps(square.toRect()))) {
+            .any((obstacle) => obstacle.toRect().overlaps(square.toRect())) ||
+        square.size.x <= 0) {
       square.y = size.y / 2;
       square.speedY = 0.0;
+      square.size.x = Square.squareSize;
       obstacles.forEach((obstacle) {
-        obstacle.x = size.x;
+        obstacle.x = size.x + obstacles.indexOf(obstacle) * size.x / 5;
         obstacle.y = rng.nextInt(3) * size.y / 2;
-        obstacle.size.y = rng.nextDouble() * 128.0 + 64.0;
+        obstacle.size.y = rng.nextDouble() * 256.0 + 64.0;
       });
+      powerUps.forEach(remove);
+      powerUps.clear();
+      timeUntilNextPowerUp = 3.0;
     }
     obstacles.removeWhere((obstacle) => obstacle.x < 0);
     if (obstacles.length < 5) {
       obstacles.add(Obstacle(size.x, rng.nextInt(3) * size.y / 2,
-          rng.nextDouble() * 128.0 + 64.0));
+          rng.nextDouble() * 256.0 + 64.0));
       add(obstacles.last);
     }
+    powerUps.removeWhere((powerUp) => powerUp.x < 0);
+    powerUps
+        .where((powerUp) => powerUp.toRect().overlaps(square.toRect()))
+        .forEach((powerUp) {
+      square.size.x = Square.squareSize;
+      powerUps.remove(powerUp);
+      remove(powerUp);
+    });
+    timeUntilNextPowerUp -= dt;
+    if (timeUntilNextPowerUp <= 0) {
+      powerUps.add(PowerUp(size.x, rng.nextDouble() * size.y));
+      add(powerUps.last);
+      timeUntilNextPowerUp = 3.0;
+    }
+    square.size.x -= dt * 10;
   }
 }
 
@@ -92,7 +115,7 @@ class Square extends RectangleComponent {
 }
 
 class Obstacle extends RectangleComponent {
-  static const obstacleSpeed = 100.0;
+  static const obstacleSpeed = 200.0;
 
   static final Paint green = BasicPalette.green.paint();
 
@@ -113,5 +136,30 @@ class Obstacle extends RectangleComponent {
   Future<void> onLoad() async {
     super.onLoad();
     paint = green;
+  }
+}
+
+class PowerUp extends RectangleComponent {
+  static const powerUpSpeed = 200.0;
+
+  static final Paint orange = BasicPalette.orange.paint();
+
+  PowerUp(double initialX, double initialY)
+      : super(
+          position: Vector2(initialX, initialY),
+          size: Vector2.all(32.0),
+          anchor: Anchor.center,
+        );
+
+  @override
+  void update(double dt) {
+    super.update(dt);
+    x -= powerUpSpeed * dt;
+  }
+
+  @override
+  Future<void> onLoad() async {
+    super.onLoad();
+    paint = orange;
   }
 }
