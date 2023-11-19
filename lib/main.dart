@@ -43,10 +43,12 @@ class MyGame extends FlameGame with TapDetector {
     if (square.toRect().bottom > size.y ||
         obstacles
             .any((obstacle) => obstacle.toRect().overlaps(square.toRect())) ||
-        square.size.x <= 0) {
+        square.size.x <= 0 ||
+        square.size.y <= 0) {
       square.y = size.y / 2;
       square.speedY = 0.0;
       square.size.x = Square.squareSize;
+      square.size.y = Square.squareSize;
       obstacles.forEach((obstacle) {
         obstacle.x = size.x + obstacles.indexOf(obstacle) * size.x / 5;
         obstacle.y = rng.nextInt(3) * size.y / 2;
@@ -63,10 +65,15 @@ class MyGame extends FlameGame with TapDetector {
       add(obstacles.last);
     }
     powerUps.removeWhere((powerUp) => powerUp.x < 0);
+    List<PowerUp> toRemove = [];
     powerUps
         .where((powerUp) => powerUp.toRect().overlaps(square.toRect()))
         .forEach((powerUp) {
       square.size.x = Square.squareSize;
+      square.size.y = Square.squareSize;
+      toRemove.add(powerUp);
+    });
+    toRemove.forEach((powerUp) {
       powerUps.remove(powerUp);
       remove(powerUp);
     });
@@ -77,6 +84,7 @@ class MyGame extends FlameGame with TapDetector {
       timeUntilNextPowerUp = 3.0;
     }
     square.size.x -= dt * 10;
+    square.size.y -= dt * 10;
   }
 }
 
