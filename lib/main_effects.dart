@@ -1,10 +1,10 @@
 import 'dart:math';
 import 'package:flame/components.dart';
-import 'package:flame/game.dart';
 import 'package:flame/events.dart';
+import 'package:flame/game.dart';
 import 'package:flame/palette.dart';
-import 'package:flame/particles.dart';
 import 'package:flutter/material.dart';
+import 'package:flame/particles.dart';
 
 void main() {
   runApp(
@@ -14,7 +14,7 @@ void main() {
   );
 }
 
-class MyGame extends FlameGame with TapDetector {
+class MyGame extends FlameGame {
   late Square square;
   late List<Obstacle> obstacles;
   late List<PowerUp> powerUps;
@@ -31,11 +31,6 @@ class MyGame extends FlameGame with TapDetector {
             rng.nextInt(3) * size.y / 2, rng.nextDouble() * 256.0 + 64.0));
     obstacles.forEach(add);
     powerUps = [];
-  }
-
-  @override
-  void onTapDown(TapDownInfo info) {
-    square.jump();
   }
 
   @override
@@ -91,6 +86,11 @@ class MyGame extends FlameGame with TapDetector {
     square.size.x -= dt * 10;
     square.size.y -= dt * 10;
   }
+
+  void onTapDown(TapDownInfo info) {
+    square.jump();
+    add(FireParticle(square.position));
+  }
 }
 
 class Square extends RectangleComponent {
@@ -109,30 +109,6 @@ class Square extends RectangleComponent {
           anchor: Anchor.center,
         );
 
-  late ParticleSystemComponent fireEffect;
-
-  @override
-  Future<void> onLoad() async {
-    super.onLoad();
-    paint = orange;
-
-    fireEffect = ParticleSystemComponent(
-      particle: Particle.generate(
-        count: 10,
-        generator: (i) => AcceleratedParticle(
-          acceleration: Vector2(0, -100),
-          speed: Vector2(0, 20),
-          child: CircleParticle(
-            radius: 2.0,
-            paint: Paint()..color = Colors.orange,
-          ),
-        ),
-      ),
-    );
-
-    add(fireEffect);
-  }
-
   void jump() {
     speedY = -jumpStrength;
   }
@@ -142,7 +118,12 @@ class Square extends RectangleComponent {
     super.update(dt);
     speedY += gravity * dt;
     y += speedY * dt;
-    fireEffect.position.setFrom(position);
+  }
+
+  @override
+  Future<void> onLoad() async {
+    super.onLoad();
+    paint = orange;
   }
 }
 
@@ -194,4 +175,17 @@ class PowerUp extends RectangleComponent {
     super.onLoad();
     paint = orange;
   }
+}
+
+class FireParticle extends ParticleSystemComponent {
+  FireParticle(Vector2 position)
+      : super(
+          particle: ComputedParticle(
+            lifespan: 2.0,
+            renderer: (canvas, particle) {
+              final paint = Paint()..color = Colors.orange;
+              canvas.drawCircle(Offset(position.x, position.y), 10, paint);
+            },
+          ),
+        );
 }
